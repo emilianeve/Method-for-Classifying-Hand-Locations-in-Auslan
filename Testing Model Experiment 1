@@ -1,0 +1,48 @@
+
+import cv2
+import gc
+import os
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import tensorflow as tf
+import seaborn as sb
+
+from sklearn.model_selection import train_test_split
+from sklearn import metrics
+
+from PIL import Image
+from glob import glob
+from tensorflow import keras
+from keras import layers
+
+saved_model_path = "/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/Saved Models/Model - Experiment 2 Multiple Classes"
+model = tf.keras.models.load_model(saved_model_path)
+
+
+#Data Visualisation
+path = "/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/Location Data Images - Test"
+classes = os.listdir(path)
+classes.remove(".DS_Store")
+
+df = pd.read_excel("/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/Location Data Images - Test/nose/nose_keypoints.xlsx", index_col= 0)
+keypoints = df.loc[df["File Name"]=="BITE_931609473530.jpg"]
+keypoints.pop("File Name")
+keypoints.to_numpy()
+print(keypoints)
+
+# Test the prediction on an image 
+img_path = "/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/Location Data Images - Test/nose/BITE_931609473530.jpg"
+
+img = keras.utils.load_img(img_path, target_size=(256, 256))
+img_array = keras.utils.img_to_array(img)
+img_batch = np.expand_dims(img_array, axis=0)
+
+
+prediction = model.predict([img_batch,keypoints])
+
+
+print (F'Prediction: {prediction}')
+print (classes[np.argmax(prediction)])
+

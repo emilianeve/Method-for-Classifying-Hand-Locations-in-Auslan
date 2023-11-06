@@ -1,0 +1,104 @@
+import cv2
+import gc
+import os
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import tensorflow as tf
+import seaborn as sb
+
+from sklearn.model_selection import train_test_split
+from sklearn import metrics
+
+from PIL import Image
+from glob import glob
+from tensorflow import keras
+from keras import layers
+from keras import Model
+
+path = "/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/Location Data Images - Test"
+classes = os.listdir(path)
+classes.remove(".DS_Store")
+
+
+saved_model_path = "/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/Saved Models/Model - Experiment v3"
+model = tf.keras.models.load_model(saved_model_path)
+
+IMG_SIZE = 256
+SPLIT = 0.2
+EPOCHS = 10
+BATCH_SIZE = 64
+
+X = []
+Y = []
+
+df_processed = pd.DataFrame()
+imagelist = []
+
+'The return of this is a concatenated df with all keypoints and a list with all images in it '
+''
+for i, cat in enumerate(classes):
+    #images = glob(f'{path}/{cat}/*.jpg')
+    keypoint_files = glob(f'{path}/{cat}/*.xlsx')
+    print(keypoint_files)
+
+    for file in keypoint_files:
+        df = pd.read_excel(file,index_col = 0)
+        
+        df['Location'] = i 
+        
+        for index, row in df.iterrows():
+            image = df.loc[index, 'File Name']
+            filename = path + '/' + cat + "/" + image
+
+            img = cv2.imread(filename)
+            imagelist.append(cv2.resize(img, (IMG_SIZE,IMG_SIZE)))
+            Y.append(i)
+        
+        
+        df.drop("File Name", axis = 1, inplace=True)
+
+        df_processed = pd.concat([df_processed, df], ignore_index = True)
+
+imagelist = np.asarray(imagelist)
+# print(df_processed)
+
+# df_processed.drop(columns = 0, inplace = True)
+df_processed.to_numpy()
+
+
+
+# print("Processed Training Set: {}". format(df_processed.shape))
+# print("Image Dataset {}".format (imagelist.shape))
+
+#print(Y)
+
+# Separating data into testing and training
+(train_data_X, test_data_X, train_image_X, test_image_X) = train_test_split(df_processed,imagelist, test_size = SPLIT, random_state= 2022)
+
+
+train_y = train_data_X["Location"] 
+test_y = test_data_X["Location"]
+
+train_data_X.pop("Location")
+test_data_X.pop("Location")
+
+# 'Use this for image model ?'
+train_y_image = pd.get_dummies(train_y).values #train y
+test_y_image = pd.get_dummies(test_y).values #Y_VAL
+
+Y_pred = model.predict([test_image_X,test_data_X])
+Y_val = np.argmax(test_y_image,axis= 1)
+Y_pred = np.argmax(Y_pred, axis = 1)
+
+cm = metrics.confusion_matrix(Y_val, Y_pred)
+
+
+plt.figure()
+sb.heatmap(cm, xticklabels=classes, yticklabels=classes, annot=True, fmt='g',cmap = "Blues", vmin = 0, vmax = 30)
+plt.xlabel('Prediction')
+plt.xticks(rotation = 45)
+plt.ylabel('Label')
+
+plt.show()

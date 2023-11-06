@@ -1,0 +1,73 @@
+import pympi
+import cv2
+import os
+import pandas as pd
+import numpy as np
+from pathlib import Path
+
+
+
+#Create a data frame from the excel file
+
+strInputFilePath = "/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/Labelled Glosses.xlsx"
+
+
+dfLocations = pd.read_excel(strInputFilePath)
+# print(dfLocations)
+
+strReadFilePath = "/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/Elar Video Segments - Sorted"
+strWriteFilePath = "/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/Location Data"
+
+#Test with one folder 
+# strGloss = str(dfLocations.iloc[0] ["Gloss"])
+# strLocation = str(dfLocations.iloc[0] ["Location"]) 
+
+# strGlossFolderPath = strReadFilePath + '/' + strGloss
+# lstGlossFolder = os.listdir(strGlossFolderPath)
+
+
+# for video in lstGlossFolder:
+#     if video == ".DS_Store":
+#         continue
+#     print(video)
+
+#     strVideoLocation = strGlossFolderPath +'/' +video
+#     print(strVideoLocation)
+#     #The folder the videos are being moved to 
+#     strLocationFolderPath =  strWriteFilePath + '/' + strLocation
+#     print(strLocationFolderPath)
+#     # path = os.path(strLocationFolderPath)
+#     # print(path)
+
+#     try:
+#         os.mkdir(strLocationFolderPath)
+#     except OSError as error:
+#         print("Error")
+#     os.rename(strVideoLocation, strLocationFolderPath + '/' + video)
+
+
+
+#Moving All Folders and labelled videos
+for row in dfLocations.itertuples(index = True):
+    strGloss = str(getattr(row,"Gloss"))
+    strLocation = str(getattr(row,"Location")) 
+
+    strGlossFolderPath = strReadFilePath + '/' + strGloss
+    lstGlossFolder = os.listdir(strGlossFolderPath)
+
+    for video in lstGlossFolder:
+        if video == ".DS_Store":
+            continue
+        # print(video)
+
+        strVideoLocation = strGlossFolderPath +'/' +video
+        # print(strVideoLocation)
+        #The folder the videos are being moved to 
+        strLocationFolderPath =  strWriteFilePath + '/' + strLocation
+        # print(strLocationFolderPath)
+
+        try:
+            os.mkdir(strLocationFolderPath)
+        except OSError as error:
+            print("Error")
+        os.rename(strVideoLocation, strLocationFolderPath + '/' + video)

@@ -1,0 +1,58 @@
+import cv2
+import gc
+import os
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import tensorflow as tf
+import seaborn as sb
+
+df = pd.read_csv("/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/Saved Models/Model - MLP v3.1/logs_v2.csv", index_col = 0)
+# cm = pd.read_excel("/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/MLP - cm(1000epochs).xlsx", header = None)
+
+# path = "/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/Location Data Images - Test"
+# classes = os.listdir(path)
+# classes.remove(".DS_Store")
+
+
+# plt.figure()
+# sb.heatmap(cm, xticklabels=classes, yticklabels=classes, annot=True, fmt='g',cmap = "Blues", vmin = 0, vmax = 30)
+# plt.xlabel('Prediction')
+# # plt.xticks(rotation = 45)
+# plt.ylabel('Label')
+
+# plt.show()
+
+
+
+acc =df.loc[0]
+val_acc = df.loc[1]
+loss = df.loc[2]
+val_loss = df.loc[3]
+
+
+
+
+epochs = np.arange(1,101)
+# print(epochs)
+
+
+
+plt.figure()
+plt.subplot(1, 2, 1)
+plt.plot(epochs, acc, label='Training Accuracy')
+plt.plot(epochs, val_acc, label='Validation Accuracy')
+plt.legend(loc='lower right')
+plt.title('Training and Validation Accuracy')
+
+
+
+plt.subplot(1, 2, 2)
+plt.plot(epochs, loss, label='Training Loss')
+plt.plot(epochs, val_loss, label='Validation Loss')
+plt.legend(loc='upper right')
+plt.title('Training and Validation Loss')
+
+plt.tight_layout()
+plt.show()

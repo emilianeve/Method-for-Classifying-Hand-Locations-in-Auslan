@@ -1,0 +1,187 @@
+import cv2
+import gc
+import os
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import tensorflow as tf
+import seaborn as sb
+
+from sklearn.model_selection import train_test_split
+from sklearn import metrics
+
+from PIL import Image
+from glob import glob
+from tensorflow import keras
+from keras import layers
+from keras import Model
+
+#MODEL WITH MULTI - INPUT (mediapipe location datapoints)
+
+path = "/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/MLP Test Data"
+classes = os.listdir(path)
+classes.remove(".DS_Store")
+
+#Data Preparation
+IMG_SIZE = 256
+SPLIT = 0.2
+EPOCHS = 100
+BATCH_SIZE = 32
+
+X = []
+Y = []
+
+# df_processed = pd.DataFrame()
+# imagelist = []
+
+'The return of this is a concatenated df with all keypoints and a list with all images in it '
+''
+for i, cat in enumerate(classes):
+    #images = glob(f'{path}/{cat}/*.jpg')
+    keypoint_files = glob(f'{path}/{cat}/*.xlsx')
+    # print(keypoint_files)
+
+    for file in keypoint_files:
+        df = pd.read_excel(file,index_col = 0)
+        
+        if df.shape != (553,3):
+            continue
+        else:
+            df = df.to_numpy()
+            df = df.flatten()
+            
+            # print(df)
+            X.append(df)
+            Y.append(i)
+
+#         # df_processed = pd.concat([df_processed, df], ignore_index = True)
+
+# # imagelist = np.asarray(imagelist)
+# # print(df_processed)
+
+# # df_processed.drop(columns = 0, inplace = True)
+X = np.asarray(X)
+
+one_hot_encoded_Y = pd.get_dummies(Y).values
+
+print(X[0])
+print(one_hot_encoded_Y)
+
+# Separating data into testing and training
+X_train, X_test, Y_train, Y_test = train_test_split(X, one_hot_encoded_Y,
+                                                  test_size = SPLIT,
+                                                  random_state = 2022)
+X_train,X_val,Y_train,Y_val = train_test_split(X_train,Y_train, test_size = 0.25,random_state = 2022 )
+
+#Pre-processing 
+layer = tf.keras.layers.experimental.preprocessing.Normalization()
+layer.adapt(X_train)
+# Model initialization
+
+
+model = tf.keras.models.Sequential([
+    layer,
+    tf.keras.layers.Input(shape = (553*3,)),
+    tf.keras.layers.Dense(64, activation = "relu"),
+    tf.keras.layers.Dense(64, activation = "relu"),
+    tf.keras.layers.Dropout(0.3),
+    tf.keras.layers.Dense(16, activation = 'softmax')
+])
+
+model.compile(optimizer = 'adam', loss ='categorical_crossentropy', metrics = ['accuracy'])
+
+model.summary()
+
+# print(Y_train)
+# print(Y_val)
+# Keypoint Model 
+# normalise = layers.Normalization(name='keypoints_normalise')
+# normalise.adapt(X_train)
+
+
+# data_shape = X_train.shape[1]
+# print(data_shape)
+# keypoint_input = layers.Input(shape = data_shape, name = "keypoints")
+# # keypoint_model = normalise(keypoint_input)
+# keypoint_model = layers.Dense(128, activation='relu')(keypoint_input)
+# keypoint_model = layers.Dense(128, activation='relu')(keypoint_model)
+# keypoint_output = layers.Dropout(0.3)(keypoint_model)
+
+# predictions = layers.Dense(16, activation = 'softmax')(keypoint_output)
+
+
+# model = keras.Model(inputs = keypoint_input, outputs = predictions)
+# # model = keras.models.Sequential([
+# #     layers.Normalization(),
+# #     layers.Dense(128, activation='relu',input_shape = data_shape),
+# #     layers.Dense(128, activation = 'relu'),
+# #     layers.Dropout(0.3),
+# #     layers.Dense(3, activation = 'softmax')
+# # ])
+
+# # model.compile(optimizer = 'adam', loss = 'categorical_crossentropy', metrics = ['accuracy'])
+
+# from keras.callbacks import EarlyStopping, ReduceLROnPlateau
+ 
+ 
+# class myCallback(tf.keras.callbacks.Callback):
+#     def on_epoch_end(self, epoch, logs={}):
+#         if logs.get('val_accuracy') > 0.90:
+#             print('\n Validation accuracy has reached upto \
+#                       90% so, stopping further training.')
+#             self.model.stop_training = True
+ 
+ 
+# es = EarlyStopping(patience=3,
+#                    monitor='val_accuracy',
+#                    restore_best_weights=True)
+ 
+# lr = ReduceLROnPlateau(monitor='val_loss',
+#                        patience=2,
+#                        factor=0.5,
+#                        verbose=1)
+
+history = model.fit(X_train, Y_train,
+                    validation_data = (X_val, Y_val),
+                    batch_size = BATCH_SIZE,
+                    epochs = EPOCHS,
+                    )
+saved_model_path = "/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/Saved Models/Model - MLP v3.2"
+model.save(saved_model_path)
+
+
+#Model evaluation
+Y_pred = model.predict(X_test)
+Y_test = np.argmax(Y_test, axis=1)
+# Y_val = np.argmax(Y_val, axis=1)
+Y_pred = np.argmax(Y_pred, axis=1)
+
+print(len(Y_test))
+print(len(Y_pred))
+
+
+acc = np.array(history.history['accuracy'])
+val_acc = np.array(history.history['val_accuracy'])
+loss = np.array(history.history['loss'])
+val_loss = np.array(history.history['val_loss'])
+
+logs = pd.DataFrame(np.array([acc, val_acc, loss, val_loss]))
+logs.to_csv(saved_model_path + "/logs_v2.csv")
+
+
+cm = metrics.confusion_matrix(Y_test, Y_pred)
+# cm = metrics.confusion_matrix(Y_val, Y_pred)
+cmatrix = pd.DataFrame(cm)
+cmatrix.to_csv(saved_model_path + "/confusion_m.csv")
+
+plt.figure()
+sb.heatmap(cm, xticklabels=classes, yticklabels=classes, annot=True, fmt='g',cmap = "Blues", vmin = 0, vmax = 30)
+plt.xlabel('Prediction')
+plt.ylabel('Label')
+
+plt.show()
+
+print(cm)
+print(metrics.classification_report(Y_test, Y_pred,
+                                    target_names=classes))

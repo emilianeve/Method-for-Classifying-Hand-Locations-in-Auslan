@@ -1,0 +1,103 @@
+import cv2 
+import time
+import mediapipe as mp
+import numpy as np
+import pandas as pd
+import os
+
+def extract_all_keypoints(results):
+    lh = np.array([[res.x, res.y, res.z] for res in results.left_hand_landmarks.landmark]).flatten() if results.left_hand_landmarks else np.zeros(21*3)
+    rh = np.array([[res.x, res.y, res.z] for res in results.right_hand_landmarks.landmark]).flatten() if results.right_hand_landmarks else np.zeros(21*3)
+    body = np.array([[res.x,res.y,res.z] for res in results.pose_landmarks.landmark]).flatten() if results.pose_landmarks else np.zeros(33*3)
+    face = np.array([[res.x,res.y,res.z] for res in results.face_landmarks.landmark]).flatten() if results.face_landmarks else np.zeros(468*3)
+    return np.concatenate([rh,lh,body,face]) 
+
+
+mp_drawing = mp.solutions.drawing_utils
+mp_drawing_styles = mp.solutions.drawing_styles
+mp_holistic = mp.solutions.holistic
+
+# For static images:
+
+inputFile = "/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/Location Data Images - Test/lower_head/"
+
+# inputFile = "/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/validation test/"
+# IMAGE_FILES = os.listdir("/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/validation test/")
+
+IMAGE_FILES = os.listdir("/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/Location Data Images - Test/lower_head")
+BG_COLOR = (192, 192, 192) # gray
+df_output= pd.DataFrame()
+
+with mp_holistic.Holistic(
+    static_image_mode=True,
+    model_complexity=2,
+    enable_segmentation=True,
+    refine_face_landmarks=True) as holistic:
+  for idx, file in enumerate(IMAGE_FILES):
+    if file == ".DS_Store" or file == "~$wrist_keypoints.xlsx":
+        continue
+    print(file)
+    image = cv2.imread(inputFile + file)
+    image_height, image_width, _ = image.shape
+    # Convert the BGR image to RGB before processing.
+    results = holistic.process(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+
+    if results.pose_landmarks:
+      print(
+          f'Nose coordinates: ('
+          f'{results.pose_landmarks.landmark[mp_holistic.PoseLandmark.NOSE].x * image_width}, '
+          f'{results.pose_landmarks.landmark[mp_holistic.PoseLandmark.NOSE].y * image_height})'
+      )
+
+    annotated_image = image.copy()
+
+    # Draw segmentation on the image.
+    # To improve segmentation around boundaries, consider applying a joint
+    # bilateral filter to "results.segmentation_mask" with "image".
+    condition = np.stack((results.segmentation_mask,) * 3, axis=-1) > 0.1
+    bg_image = np.zeros(image.shape, dtype=np.uint8)
+    bg_image[:] = BG_COLOR
+    annotated_image = np.where(condition, annotated_image, bg_image)
+    # Draw pose, left and right hands, and face landmarks on the image.
+    mp_drawing.draw_landmarks(
+        annotated_image,
+        results.face_landmarks,
+        mp_holistic.FACEMESH_TESSELATION,
+        landmark_drawing_spec=None,
+        connection_drawing_spec=mp_drawing_styles
+        .get_default_face_mesh_tesselation_style())
+    mp_drawing.draw_landmarks(
+        annotated_image,
+        results.pose_landmarks,
+        mp_holistic.POSE_CONNECTIONS,
+        landmark_drawing_spec=mp_drawing_styles.
+        get_default_pose_landmarks_style())
+
+    keypoints = extract_all_keypoints(results)
+    print(keypoints)
+
+   
+    df_img_keyoints = pd.DataFrame(keypoints)
+
+    df_transpose = df_img_keyoints.transpose()
+
+    df_transpose.insert(0, 'File Name', file)
+
+    df_transpose.reset_index(drop=True, inplace=True)
+
+    # df_transpose['File Name'] = file
+
+    #df_transpose.index = [file]
+
+    df_output = pd.concat([df_output, df_transpose], ignore_index = True)
+
+
+# df_output.to_excel(inputFile + 'lower_head_keypoints' + ".xlsx")
+    
+    
+    # 'cv2.imwrite('/tmp/annotated_image' + str(idx) + '.png', annotated_image)
+
+
+    # Plot pose world landmarks.
+    # mp_drawing.plot_landmarks(
+    #     results.pose_world_landmarks, mp_holistic.POSE_CONNECTIONS)

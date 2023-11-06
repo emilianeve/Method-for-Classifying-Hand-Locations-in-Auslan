@@ -1,0 +1,54 @@
+import mediapipe as mp
+import cv2 
+import pandas as pd
+import os
+
+# # (0) in VideoCapture is used to connect to your computer's default camera
+# capture = cv2.VideoCapture(inputFilePath + ".mp4")
+ 
+# # Initializing current time and precious time for calculating the FPS
+# previousTime = 0
+# currentTime = 0
+
+# ret, image = capture.read()
+# count = 0
+
+# while ret:
+#     cv2.imwrite(inputFilePath + "_%d.jpg" % count, image)
+#     ret,image = capture.read()
+#     print ("Read a new frame: ", ret)
+#     count += 1
+
+
+
+def extract_video_frames(input_file, output_location, video_name):
+    capture = cv2.VideoCapture(input_file)
+
+    success, image = capture.read()
+    count = 0
+
+    while success:
+        cv2.imwrite(outputFilePath + video_name + "%d.jpg" % count, image)
+        success,image = capture.read()
+        print("Read a new frame: ", success)
+        count += 1
+
+inputFilePath = "/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/Location Data - Videos/Lower Head/"
+outputFilePath = "/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/Location Data - Images/upper_leg/"
+
+folderList = os.listdir(inputFilePath)
+
+
+for video in folderList:
+
+    videoName = video.split(".")[0]
+    inputFile = inputFilePath + videoName + ".mp4"
+
+
+    extract_video_frames(inputFile, outputFilePath, videoName)
+
+    print ("All frames extracted for :" + videoName)
+
+print ("All videos in folder extracted")
+
+

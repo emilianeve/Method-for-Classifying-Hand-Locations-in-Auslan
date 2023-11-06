@@ -1,0 +1,50 @@
+import cv2
+import gc
+import os
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import tensorflow as tf
+import seaborn as sb
+
+from sklearn.model_selection import train_test_split
+from sklearn import metrics
+
+from PIL import Image
+from glob import glob
+from tensorflow import keras
+from keras import layers
+
+# path = "/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/Location Data Images - Test"
+# classes = os.listdir(path)
+# classes.remove(".DS_Store")
+
+# count = []
+# for cat in classes:
+#     count.append(len(os.listdir(f'{path}/{cat}')))
+
+# my_plot = sb.barplot(x = classes, y = count, color='steelblue')
+# my_plot.set(xlabel = 'Hand Location', ylabel = 'Count', title = 'Class Distribution')
+# my_plot.set_xticklabels(my_plot.get_xticklabels(), rotation=90)
+# # plt.set_xticklabels(rotation = 45)
+# plt.show()
+
+
+path = "/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/Location Data - Videos"
+classes = os.listdir(path)
+classes.remove(".DS_Store")
+classes.remove("Lower Head")
+classes.remove("Above Head")
+count = []
+for cat in classes:
+ 
+    count.append(len(os.listdir(f'{path}/{cat}')))
+
+
+
+my_plot = sb.barplot(x = classes, y = count, color='steelblue')
+my_plot.set(xlabel = 'Hand Location', ylabel = 'Count', title = 'Class Distribution')
+my_plot.set_xticklabels(my_plot.get_xticklabels(), rotation=90)
+# plt.set_xticklabels(rotation = 45)
+plt.show()

@@ -1,0 +1,244 @@
+import cv2
+import gc
+import os
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import tensorflow as tf
+import seaborn as sb
+
+from sklearn.model_selection import train_test_split
+from sklearn import metrics
+
+from PIL import Image
+from glob import glob
+from tensorflow import keras
+from keras import layers
+from keras import Model
+
+#MODEL WITH MULTI - INPUT (mediapipe location datapoints)
+
+path = "/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/Location Data Images - Test"
+classes = os.listdir(path)
+classes.remove(".DS_Store")
+
+
+
+
+#Data Preparation
+IMG_SIZE = 256
+SPLIT = 0.2
+EPOCHS = 10
+BATCH_SIZE = 64
+
+X = []
+Y = []
+
+df_processed = pd.DataFrame()
+imagelist = []
+
+'The return of this is a concatenated df with all keypoints and a list with all images in it '
+''
+for i, cat in enumerate(classes):
+    #images = glob(f'{path}/{cat}/*.jpg')
+    keypoint_files = glob(f'{path}/{cat}/*.xlsx')
+    print(keypoint_files)
+
+    for file in keypoint_files:
+        df = pd.read_excel(file,index_col = 0)
+        
+        df['Location'] = i 
+        
+        for index, row in df.iterrows():
+            image = df.loc[index, 'File Name']
+            filename = path + '/' + cat + "/" + image
+
+            img = cv2.imread(filename)
+            imagelist.append(cv2.resize(img, (IMG_SIZE,IMG_SIZE)))
+            Y.append(i)
+        
+        
+        df.drop("File Name", axis = 1, inplace=True)
+
+        df_processed = pd.concat([df_processed, df], ignore_index = True)
+
+imagelist = np.asarray(imagelist)
+# print(df_processed)
+
+# df_processed.drop(columns = 0, inplace = True)
+df_processed.to_numpy()
+
+
+
+# print("Processed Training Set: {}". format(df_processed.shape))
+# print("Image Dataset {}".format (imagelist.shape))
+
+#print(Y)
+
+# Separating data into testing and training
+(train_data_X, test_data_X, train_image_X, test_image_X) = train_test_split(df_processed,imagelist, test_size = SPLIT, random_state= 2022)
+
+
+train_y = train_data_X["Location"] 
+test_y = test_data_X["Location"]
+
+train_data_X.pop("Location")
+test_data_X.pop("Location")
+
+# print (train_data_X)
+# print (test_data_X)
+'Use this for image model ?'
+train_y_image = pd.get_dummies(train_y).values #train y
+test_y_image = pd.get_dummies(test_y).values #Y_VAL
+
+
+' drop location/sign name from x data set? could influence results'
+'USE KERAS FUNCTIONAL API FOR THIS PART OF MODEL'
+#Keypoint Model 
+normalise = layers.Normalization(name='keypoints_normalise')
+normalise.adapt(train_data_X)
+
+data_shape = train_data_X.shape[1]
+keypoint_input = layers.Input(shape = data_shape, name = "keypoints")
+keypoint_model = normalise(keypoint_input)
+keypoint_model = layers.Dense(128, activation='relu')(keypoint_model)
+
+keypoint_output = layers.Dropout(0.3)(keypoint_model)
+print(keypoint_output.shape)
+
+#Image Model  - using keras functional api
+image_input = layers.Input(shape = (IMG_SIZE,IMG_SIZE, 3), name = "img")
+x = layers.Conv2D(filters=32,
+                  kernel_size=(5, 5),
+                  activation='relu',
+                  input_shape=(IMG_SIZE,
+                               IMG_SIZE,
+                               3),
+                  padding='same')(image_input)
+x = layers.MaxPooling2D(2,2)(x)
+x = layers.Conv2D(filters=64, 
+                  kernel_size=(3,3), 
+                  activation='relu',
+                  padding='same')(x)
+x = layers.MaxPooling2D(2,2)(x)
+x = layers.Conv2D(filters=128,
+                  kernel_size=(3, 3),
+                  activation='relu',
+                  padding='same')(x)
+x = layers.MaxPooling2D(2,2)(x)
+x = layers.Flatten()(x)
+x = layers.Dense(256, activation='relu')(x)
+x = layers.BatchNormalization()(x)
+x = layers.Dense(128, activation = 'relu')(x)
+image_output= layers.Dropout(0.3)(x)
+
+print(image_output.shape)
+
+#Combing the keypoint and image outputs
+x = layers.concatenate([image_output,keypoint_output], name = 'concat_img__kpoint')
+predictions = layers.Dense(3, activation = 'softmax')(x)
+
+model = keras.Model(inputs = [image_input, keypoint_input], outputs = predictions)
+
+model.compile(optimizer ="adam", loss = "categorical_crossentropy", metrics = ['accuracy'])
+
+from keras.callbacks import EarlyStopping, ReduceLROnPlateau
+ 
+ 
+class myCallback(tf.keras.callbacks.Callback):
+    def on_epoch_end(self, epoch, logs={}):
+        if logs.get('val_accuracy') > 0.90:
+            print('\n Validation accuracy has reached upto \
+                      90% so, stopping further training.')
+            self.model.stop_training = True
+ 
+ 
+es = EarlyStopping(patience=3,
+                   monitor='val_accuracy',
+                   restore_best_weights=True)
+ 
+lr = ReduceLROnPlateau(monitor='val_loss',
+                       patience=2,
+                       factor=0.5,
+                       verbose=1)
+
+history = model.fit([train_image_X,train_data_X],
+                    train_y_image,
+                    validation_data = ([test_image_X,test_data_X],test_y_image),
+                    batch_size = BATCH_SIZE,
+                    epochs = EPOCHS,
+                    verbose = 1,
+                    callbacks = [es, lr, myCallback()])
+
+#SAVE THE MODEL 
+saved_model_path = "/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/Saved Models/Model - Experiment "
+model.save(saved_model_path)
+
+
+
+#Model evaluation
+Y_pred = model.predict([test_image_X,test_data_X])
+Y_val = np.argmax(test_y_image,axis= 1)
+Y_pred = np.argmax(Y_pred, axis = 1)
+
+print(metrics.classification_report(Y_val, Y_pred,
+                                    target_names=classes))
+
+
+#Model evaluation
+# Y_pred = model.predict(X_val)
+# Y_val = np.argmax(Y_val, axis=1)
+# Y_pred = np.argmax(Y_pred, axis=1)
+
+# metrics.confusion_matrix(Y_val, Y_pred)
+
+# print(metrics.classification_report(Y_val, Y_pred,
+#                                     target_names=classes))         
+
+# history = model.fit(
+#                     validation_data = (X_val, Y_val),
+#                     batch_size = BATCH_SIZE,
+#                     epochs = EPOCHS,
+#                     verbose = 1,
+#                     callbacks = [es, lr, myCallback()])
+
+                    
+# x = layers.BatchNormalization()(x)
+# image_output = layers.Dense(3, activation = 'softmax')'
+
+
+
+
+
+
+#print(imagelist)
+
+# for i, cat in enumerate(classes):
+#   images = glob(f'{path}/{cat}/*.jpg')
+ 
+#   for image in images:
+#     img = cv2.imread(image)
+     
+#     X.append(cv2.resize(img, (IMG_SIZE, IMG_SIZE)))
+#     Y.append(i)
+
+# df = pd.read_csv(DATA_FILE)
+
+# print ("Training Set: {}".format(df.shape))
+
+# def get_images(df):
+#     image_list = []
+#     no_image_found = []
+#     for index, row in df.iterrows():
+#         sign_image = df.iloc[index, 0]
+#         filename = path + str(sign_image) + '.jpg'  'EDIT THIS SECTION'
+#         try:
+#             #load the image
+#             image = images.getimage(IMAGE_PATH, filename)
+#             image_list.append(image)
+#         except:
+#             no_image_found.append(sign_image)
+
+#     return np.array(image_list), no_image_found
+

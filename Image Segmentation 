@@ -1,0 +1,23 @@
+import mediapipe as mp 
+import cv2 
+import numpy as np
+import os 
+
+#Test with one image
+
+image_file_path = "/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/Location Data - Images/chest/ACCEPT_40478412280.jpg"
+image = cv2.imread(image_file_path)
+
+mp_selfie_segmentation = mp.solutions.selfie_segmentation
+segment = mp_selfie_segmentation.SelfieSegmentation(model_selection = 0)
+
+image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+results = segment.process(image)
+
+image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+image_seg_mask = results.segmentation_mask
+
+
+
+results_path = "/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/Image Segmentation"
+cv2.imwrite(results_path + "/test.jpg",replaced_img)

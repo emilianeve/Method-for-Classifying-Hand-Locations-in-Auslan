@@ -1,0 +1,26 @@
+
+import pympi 
+import ffmpeg 
+
+file_path = "/Users/emilianeve/Desktop/AJNA1c2a-VLT-answer (1)/AJNA1c2aLH-VLT-answer.eaf"
+file_path2 = "/Users/emilianeve/Desktop/AAM1A1c2a - The Boy Who Cried Wolf/AAM1A1c2a.eaf"
+ort_tier_names = ['RH-Loc','LH-Loc']
+
+eafob = pympi.Elan.Eaf(file_path)
+eaf2 = pympi.Elan.Eaf(file_path2)
+tier_names = eafob.get_tier_names()
+
+
+RH_location_data = eafob.get_annotation_data_for_tier('RH-Loc')
+LH_location_data = eafob.get_annotation_data_for_tier('LH-Loc')
+
+RH_gloss_2 = eaf2.get_annotation_data_for_tier('RH-IDgloss')
+
+test = eaf2.tiers['RH-IDgloss']
+
+eaf2.add_annotation('RH-Loc',690,1270,"Head",svg_ref = None)
+RH_loc_2 = eaf2.get_annotation_data_for_tier('RH-Loc')
+# print(f"RH Location Data: {RH_location_data}")
+# print(f"LH Location Data: {LH_location_data}")
+
+print(test[0].keys())

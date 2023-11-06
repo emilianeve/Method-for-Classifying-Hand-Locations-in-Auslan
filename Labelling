@@ -1,0 +1,97 @@
+import os
+import cv2
+import pympi 
+import numpy as np 
+from pathlib import Path
+
+
+# Sorting files by word
+corruptedVideos = ['AJBB1c2b','AJPB1c2b','AMMA1c2a','AWGB1c2a','BAOBB1c2a','BCPA1c2a','BDLA1c2a','BFPB1c2a','BFSA1c2a','BGLB1c2b','BRCA1c2a','BRVA1c2b',
+'BSSA1c2b','BCHA2c7a','SSNA1c2a']
+
+location = '/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/ELAR-video-segments'
+folderList = os.listdir(location)
+glosses = {}
+noGlosses = {}
+videoNum = 0
+
+#print (folderList)
+
+
+
+
+#Loops throuch every folder in Elar-video-segments folder
+for video in folderList:
+    if video == ".DS_Store":
+        continue
+    videoLocation = location + '/' + video  
+    
+    segmentList = os.listdir(videoLocation) #List of video segments(glosses) for each ELAR video
+    for videoSegment in segmentList:
+        if videoSegment == ".DS_Store":
+            continue
+        videoNum += 1
+        if (videoSegment.count('_'))==1:
+            try:
+                noGlosses[str.split(videoSegment,'_')[0]] += 1
+                glosses[str.split(videoSegment,'_')[0]].append(videoLocation + '/' + videoSegment)
+            except KeyError:
+                noGlosses[str.split(videoSegment,'_')[0]] = 1
+                glosses[str.split(videoSegment,'_')[0]]=[videoLocation + '/' + videoSegment]
+
+#print (glosses)
+#print(noGlosses)
+
+# Trying to move one video
+moveLocation = '/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/ELAR Video Segments - Sorted/'
+# print(moveLocation)
+# segmentName = 'ALL_6319563545.mp4'
+
+# videoSegment = location + '/AAM1A1c2a/' + segmentName
+
+# newLocationName = str.split(segmentName,'_')[0]
+# path = os.path.join(moveLocation, newLocationName)
+# print(path)
+# try:
+#     os.mkdir(path)
+# except OSError as error:
+#     print("Error") 
+
+# os.rename(videoSegment, path + '/' + segmentName)
+
+
+location = '/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/ELAR-video-segments'
+moveLocation = '/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/ELAR Video Segments - Sorted/'
+folderList = os.listdir(location)
+
+
+for video in folderList:
+    if video == ".DS_Store":
+       continue
+    videoLocation = location + '/' + video  
+    
+    segmentList = os.listdir(videoLocation) #List of video segments(glosses) for each ELAR video
+    for videoSegment in segmentList:
+        newLocationName = str.split(videoSegment,'_')[0] #gets the the gloss from the segment name
+        path = os.path.join(moveLocation, newLocationName)
+        try:
+            os.mkdir(path)
+        except OSError as error:
+            print("Error") 
+        currentLocation = videoLocation + '/' + videoSegment
+        newLocation = path + '/' + videoSegment
+        os.rename(currentLocation, newLocation)
+        
+
+#attribute hand location to each word
+
+# folderList = os.listdir(moveLocation)                       # list of all the glosses
+
+#Loop through every folder(gloss)
+#Have a video segment playing that plays every video in the folder 
+#User input to put location label 
+#location label store in gloss dictionary
+
+
+
+#re-sort by hand location

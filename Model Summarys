@@ -1,0 +1,34 @@
+import cv2
+import gc
+import os
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import tensorflow as tf
+import seaborn as sb
+
+from sklearn.model_selection import train_test_split
+from sklearn import metrics
+
+from PIL import Image
+from glob import glob
+from tensorflow import keras
+from keras import layers
+from keras import Model
+
+path = "/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/Location Data Images - Test"
+classes = os.listdir(path)
+classes.remove(".DS_Store")
+
+
+saved_model_path = "/Users/emilianeve/Documents/Uni - Sem 1 2023/METR4911/Saved Models/Model - Experiment v3"
+model = tf.keras.models.load_model(saved_model_path)
+
+model.summary()
+keras.utils.plot_model( 
+    model, 
+    show_shapes=True, 
+    show_dtype=True, 
+    show_layer_activations=True
+) 
